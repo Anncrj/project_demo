@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>星尘琥珀 · 闭馆谜题</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>星尘琥珀<span>· 闭馆谜题</span></h1>
+    <div class="chips">
+      <div class="chip" id="profile-chip">画像: 加载中</div>
+      <div class="chip" id="model-chip">model: —</div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="stage">
+      <canvas id="game" width="960" height="640"></canvas>
+      <button class="back-btn hidden" id="back-btn" type="button">← 返回展厅</button>
+      <div class="objective" id="objective">目标:先听听林晚说些什么</div>
+      <div class="hint">点击道具镜头会推近到特写 · 在特写里点击/操作 · 点空白处拉回全景</div>
+    </section>
+
+    <section class="panel">
+      <div class="chat-log" id="chat-log">
+        <div class="msg system">
+          <div class="label">system</div>
+          <div class="body">闭馆调试夜。全息星图上多了一颗暖色的星,休息区多了一张儿童画。讲解员林晚就在展厅里。</div>
+        </div>
+      </div>
+
+      <div class="hud">
+        <div class="hud-row">
+          <span class="hud-title">线索</span>
+          <div class="clue-bar" id="clue-bar"></div>
+        </div>
+        <div class="hud-row">
+          <span class="hud-title">聊聊</span>
+          <div class="topic-bar" id="topic-bar"></div>
+        </div>
+      </div>
+
+      <form class="composer" id="composer">
+        <input id="chat-input" type="text" autocomplete="off" placeholder="对林晚说点什么…(Enter 发送)" />
+        <button id="send-btn" type="submit">发送</button>
+      </form>
+      <div class="status" id="status"></div>
+    </section>
+  </main>
+
+  <div class="intro" id="intro">
+    <div class="intro-box">
+      <div class="intro-name" id="intro-name">林晚</div>
+      <div class="intro-text" id="intro-text"></div>
+      <div class="intro-foot">
+        <button class="ghost-btn" id="intro-skip" type="button">跳过</button>
+        <button class="primary-btn" id="intro-next" type="button">继续</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal hidden" id="minigame-modal">
+    <div class="modal-box">
+      <div class="modal-head">
+        <span id="minigame-title">线索小游戏(由模型现场生成)</span>
+        <button class="icon-btn" id="minigame-close" type="button">✕</button>
+      </div>
+      <iframe id="minigame-frame" sandbox="allow-scripts" title="minigame"></iframe>
+      <div class="modal-foot">
+        <button class="ghost-btn" id="minigame-restart" type="button">重新开始</button>
+        <span id="minigame-status">—</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal hidden" id="cert-modal">
+    <div class="cert-box">
+      <div class="cert-frame">
+        <div class="cert-title">星尘琥珀 · 特别参展证书</div>
+        <div class="cert-star">★</div>
+        <div class="cert-body">
+          <p>小满同学:</p>
+          <p>你画下的那颗星,今晚正式点亮在星尘厅的穹顶。</p>
+          <p>愿它照亮每一个想抬头看星星的夜晚。</p>
+          <p class="cert-sign">—— 自然博物馆 · 闭馆筹备组</p>
+        </div>
+      </div>
+      <button class="ghost-btn" id="cert-restart" type="button">重新参观</button>
+    </div>
+  </div>
+
+  <script type="module" src="./game.js"></script>
+</body>
+</html>

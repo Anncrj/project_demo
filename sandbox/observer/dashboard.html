@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Seed · Context Observatory</title>
+<style>
+  :root {
+    --bg: #060a15;
+    --panel: rgba(16, 23, 44, 0.72);
+    --panel-solid: #10172c;
+    --line: rgba(255, 255, 255, 0.08);
+    --text: #dde6f7;
+    --muted: #8b97b4;
+    --amber: #f7c66b;
+    --amber-soft: rgba(247, 198, 107, 0.16);
+    --blue: #8fb6ff;
+    --green: #7fe0a8;
+    --red: #ff8f9a;
+    --violet: #c3a4ff;
+    --cyan: #7fe3e0;
+    --rose: #ff9fc0;
+    --mono: ui-monospace, "Cascadia Code", Consolas, monospace;
+    --font: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    font-family: var(--font);
+    color: var(--text);
+    background:
+      radial-gradient(1100px 700px at 78% -10%, rgba(52, 74, 140, 0.28), transparent 62%),
+      radial-gradient(900px 600px at -8% 108%, rgba(247, 198, 107, 0.07), transparent 55%),
+      var(--bg);
+  }
+  .wrap { max-width: 1460px; margin: 0 auto; padding: 18px 20px 26px; }
+
+  header {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    padding: 14px 18px; margin-bottom: 14px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+    backdrop-filter: blur(10px);
+  }
+  .brand { display: flex; align-items: baseline; gap: 10px; }
+  .brand b { font-size: 15px; letter-spacing: 3px; color: var(--amber); }
+  .brand span { font-size: 11px; letter-spacing: 1.6px; color: var(--muted); }
+  .conn { display: inline-flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--muted); }
+  .conn i { width: 8px; height: 8px; border-radius: 50%; background: #5b6478; }
+  .conn.on i { background: var(--green); box-shadow: 0 0 10px rgba(127, 224, 168, 0.8); }
+  .conn.off i { background: var(--red); }
+  .stats { display: flex; gap: 8px; margin-left: auto; flex-wrap: wrap; }
+  .stat {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: 5px 12px; border-radius: 9px;
+    background: rgba(255, 255, 255, 0.04); border: 1px solid var(--line);
+  }
+  .stat b { font-family: var(--mono); font-size: 13px; color: var(--text); font-weight: 600; }
+  .stat span { font-size: 9.5px; letter-spacing: 1px; color: var(--muted); }
+  .stat.good b { color: var(--green); }
+
+  .controls {
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+  .controls input[type="search"] {
+    flex: 1; min-width: 200px;
+    padding: 9px 13px; border-radius: 9px; font-size: 12.5px;
+    background: rgba(255, 255, 255, 0.05); border: 1px solid var(--line); color: var(--text);
+    outline: none;
+  }
+  .controls input:focus { border-color: rgba(247, 198, 107, 0.5); }
+  .chip {
+    padding: 8px 13px; border-radius: 9px; font-size: 11.5px; letter-spacing: 0.6px;
+    background: rgba(255, 255, 255, 0.05); border: 1px solid var(--line);
+    color: var(--muted); cursor: pointer; user-select: none;
+    transition: all 0.15s;
+  }
+  .chip:hover { color: var(--text); border-color: rgba(255, 255, 255, 0.2); }
+  .chip.on { color: #1d1406; background: var(--amber); border-color: var(--amber); font-weight: 600; }
+  .chip.danger:hover { color: var(--red); border-color: rgba(255, 143, 154, 0.5); }
+
+  main { display: grid; grid-template-columns: 1.5fr 1fr; gap: 14px; align-items: start; }
+  @media (max-width: 980px) { main { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+    backdrop-filter: blur(10px); overflow: hidden;
+  }
+  .panel-head {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 16px; border-bottom: 1px solid var(--line);
+  }
+  .panel-head h2 { font-size: 11.5px; letter-spacing: 2.4px; color: var(--muted); font-weight: 600; }
+  .panel-head .count { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .panel-head .spacer { flex: 1; }
+
+  /* ---- 时间线 ---- */
+  #timeline { max-height: calc(100vh - 220px); overflow: auto; }
+  #timeline::-webkit-scrollbar { width: 9px; }
+  #timeline::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 99px; }
+  .ev {
+    display: grid; grid-template-columns: 66px 74px 1fr;
+    gap: 10px; align-items: start;
+    padding: 9px 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    cursor: pointer; transition: background 0.12s;
+  }
+  .ev:hover { background: rgba(255, 255, 255, 0.035); }
+  .ev .t { font-family: var(--mono); font-size: 10.5px; color: var(--muted); padding-top: 2px; }
+  .badge {
+    font-size: 9.5px; letter-spacing: 1px; font-family: var(--mono);
+    padding: 3px 7px; border-radius: 6px; text-align: center;
+    border: 1px solid transparent; white-space: nowrap;
+  }
+  .ev .body { min-width: 0; }
+  .ev .name { font-size: 12.5px; font-weight: 500; }
+  .ev .sum { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 2px; word-break: break-all; }
+  .ev pre {
+    display: none; margin-top: 8px; padding: 10px 12px; border-radius: 8px;
+    font-family: var(--mono); font-size: 10.5px; line-height: 1.55; color: #b9c6e4;
+    background: rgba(0, 0, 0, 0.35); border: 1px solid var(--line);
+    white-space: pre-wrap; word-break: break-all; max-height: 260px; overflow: auto;
+  }
+  .ev.open pre { display: block; }
+
+  .f-trace .badge, .f-task .badge { color: var(--amber); background: var(--amber-soft); border-color: rgba(247, 198, 107, 0.35); }
+  .f-context .badge { color: var(--blue); background: rgba(143, 182, 255, 0.12); border-color: rgba(143, 182, 255, 0.3); }
+  .f-generation .badge { color: var(--violet); background: rgba(195, 164, 255, 0.12); border-color: rgba(195, 164, 255, 0.3); }
+  .f-tool .badge { color: var(--cyan); background: rgba(127, 227, 224, 0.1); border-color: rgba(127, 227, 224, 0.3); }
+  .f-test .badge { color: var(--green); background: rgba(127, 224, 168, 0.1); border-color: rgba(127, 224, 168, 0.3); }
+  .f-score .badge { color: #ffd98a; background: rgba(255, 217, 138, 0.1); border-color: rgba(255, 217, 138, 0.3); }
+  .f-decision .badge { color: var(--rose); background: rgba(255, 159, 192, 0.1); border-color: rgba(255, 159, 192, 0.3); }
+  .f-session .badge { color: var(--amber); background: var(--amber-soft); border-color: rgba(247, 198, 107, 0.35); }
+  .f-error .badge { color: var(--red); background: rgba(255, 143, 154, 0.12); border-color: rgba(255, 143, 154, 0.35); }
+
+  .empty { padding: 44px 20px; text-align: center; color: var(--muted); font-size: 12.5px; line-height: 2.1; }
+  .empty code {
+    font-family: var(--mono); color: var(--amber); background: rgba(247, 198, 107, 0.08);
+    padding: 2px 7px; border-radius: 6px;
+  }
+
+  /* ---- 任务卡 ---- */
+  #traces { max-height: calc(100vh - 220px); overflow: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+  #traces::-webkit-scrollbar { width: 9px; }
+  #traces::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 99px; }
+  .task {
+    border: 1px solid var(--line); border-radius: 12px; padding: 13px 15px;
+    background: var(--panel-solid); cursor: pointer;
+    border-left: 3px solid var(--muted);
+    transition: border-color 0.15s, transform 0.15s;
+  }
+  .task:hover { transform: translateY(-1px); border-color: rgba(255, 255, 255, 0.22); }
+  .task.active { border-color: var(--amber); box-shadow: 0 0 0 1px rgba(247, 198, 107, 0.35); }
+  .task.success { border-left-color: var(--green); }
+  .task.running { border-left-color: var(--amber); }
+  .task.error { border-left-color: var(--red); }
+
+  .task-top { display: flex; align-items: center; gap: 8px; }
+  .task-top .name { font-size: 12.5px; font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pill {
+    font-size: 9.5px; letter-spacing: 0.8px; font-family: var(--mono);
+    padding: 2px 8px; border-radius: 99px; white-space: nowrap;
+  }
+  .pill.running { color: var(--amber); background: var(--amber-soft); }
+  .pill.success { color: var(--green); background: rgba(127, 224, 168, 0.12); }
+  .pill.error { color: var(--red); background: rgba(255, 143, 154, 0.12); }
+  .pill.demo { color: var(--violet); background: rgba(195, 164, 255, 0.12); }
+  .task-meta { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 7px; font-size: 10.5px; color: var(--muted); font-family: var(--mono); }
+  .task-files { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .file-chip {
+    font-family: var(--mono); font-size: 10px; color: var(--blue);
+    background: rgba(143, 182, 255, 0.08); border: 1px solid rgba(143, 182, 255, 0.22);
+    padding: 2px 7px; border-radius: 5px;
+  }
+  .testbar { display: flex; align-items: center; gap: 8px; margin-top: 9px; }
+  .testbar .bar { flex: 1; height: 4px; border-radius: 99px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+  .testbar .bar i { display: block; height: 100%; background: linear-gradient(90deg, #56c98b, #8ef0b8); }
+  .testbar .lbl { font-family: var(--mono); font-size: 10px; color: var(--green); }
+  .task-now { margin-top: 8px; font-family: var(--mono); font-size: 10.5px; color: var(--muted); }
+  .task-now b { color: var(--amber); font-weight: 500; }
+
+  footer { margin-top: 16px; text-align: center; font-size: 10.5px; color: rgba(139, 151, 180, 0.55); letter-spacing: 0.6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand"><b>SEED · CONTEXT OBSERVATORY</b><span>模型任务 / 上下文 / 工具调用 实时监测</span></div>
+    <div class="conn" id="conn"><i></i><em id="conn-text">connecting…</em></div>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <div class="controls">
+    <input type="search" id="search" placeholder="搜索事件、文件、工具…" />
+    <button class="chip" id="pause">⏸ 暂停跟随</button>
+    <button class="chip danger" id="clear">清空</button>
+  </div>
+
+  <main>
+    <section class="panel">
+      <div class="panel-head">
+        <h2>事件时间线</h2>
+        <span class="count" id="ev-count">0 条</span>
+        <div class="spacer"></div>
+        <span class="chip on" id="chain" title="点击任务卡过滤">全部任务</span>
+      </div>
+      <div id="timeline">
+        <div class="empty" id="empty">
+          等待事件…<br />
+          启动演示:<code>npm run demo</code> · 或打开游戏 <code>?observe=1</code><br />
+          <span style="opacity:.6">POST http://localhost:4318/api/events</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>任务链</h2>
+        <span class="count" id="trace-count">0</span>
+      </div>
+      <div id="traces"><div class="empty" style="padding:26px 14px">暂无任务</div></div>
+    </section>
+  </main>
+
+  <footer>本地优先 · 默认脱敏(字符数 / 哈希 / 预览) · Langfuse 兼容导出可选</footer>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var events = [];
+  var activeTrace = null;
+  var paused = false;
+  var connected = false;
+  var MAX = 600;
+  var seen = Object.create(null);
+
+  var elTimeline = document.getElementById('timeline');
+  var elEmpty = document.getElementById('empty');
+  var elTraces = document.getElementById('traces');
+  var elStats = document.getElementById('stats');
+  var elConn = document.getElementById('conn');
+  var elConnText = document.getElementById('conn-text');
+  var elSearch = document.getElementById('search');
+  var elPause = document.getElementById('pause');
+  var elChain = document.getElementById('chain');
+  var elEvCount = document.getElementById('ev-count');
+  var elTraceCount = document.getElementById('trace-count');
+
+  function fmtTime(ts) {
+    var d = new Date(ts);
+    return d.toTimeString().slice(0, 8);
+  }
+  function fmtDur(ms) {
+    if (ms < 1000) return Math.round(ms) + 'ms';
+    if (ms < 60000) return (ms / 1000).toFixed(1) + 's';
+    return Math.floor(ms / 60000) + 'm' + Math.round((ms % 60000) / 1000) + 's';
+  }
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  function family(type) {
+    if (/^(trace|task)\b/.test(type)) return 'task';
+    if (type.indexOf('context') === 0) return 'context';
+    if (type.indexOf('generation') === 0) return 'generation';
+    if (type.indexOf('tool') === 0) return 'tool';
+    if (type.indexOf('test') === 0) return 'test';
+    if (type === 'score') return 'score';
+    if (type === 'decision') return 'decision';
+    if (type.indexOf('session') === 0 || type.indexOf('game') === 0) return 'session';
+    if (type === 'error') return 'error';
+    return 'session';
+  }
+  function badgeOf(fam) {
+    return { task: 'TASK', context: 'CTX', generation: 'GEN', tool: 'TOOL', test: 'TEST', score: 'SCORE', decision: 'DECIDE', session: 'SESSION', error: 'ERROR' }[fam] || 'EVT';
+  }
+  function summarize(evt) {
+    var d = evt.data || {};
+    switch (evt.type) {
+      case 'context.read':
+        return (d.file || '?') + (d.range ? ' ' + d.range : '') + (d.chars ? ' · ' + d.chars + ' chars' : '') + (d.lines ? ' · L' + d.lines : '');
+      case 'generation.start':
+        return (d.model || 'model') + ' · ' + (d.promptChars ? d.promptChars + ' chars prompt' : 'request');
+      case 'generation.end':
+        return d.usage ? 'usage ' + (d.usage.input || 0) + '→' + (d.usage.output || 0) + ' tokens · ' + fmtDur(d.latencyMs || 0) : 'done';
+      case 'tool.start':
+        return (d.tool || evt.name || 'tool') + (d.target ? ' · ' + d.target : '');
+      case 'tool.end':
+        return (d.ok === false ? '✗ failed' : '✓ ok') + (d.summary ? ' · ' + d.summary : '') + (d.durationMs ? ' · ' + fmtDur(d.durationMs) : '');
+      case 'test.result':
+        return (d.passed || 0) + '/' + (d.total || 0) + (d.command ? ' · ' + d.command : '');
+      case 'decision':
+        return d.summary || d.note || '';
+      case 'score':
+        return (evt.name || 'score') + ' = ' + (d.value == null ? '?' : d.value);
+      case 'trace.start':
+      case 'task.start':
+        return d.task || d.title || evt.name || '';
+      case 'trace.end':
+        return (d.status || 'done') + (d.durationMs ? ' · ' + fmtDur(d.durationMs) : '');
+      case 'session.start':
+        return d.task || d.url || 'session';
+      case 'task.step':
+        return 'step · ' + (d.clue || d.step || '') + (d.stage != null ? ' · stage ' + d.stage : '');
+      case 'session.reset':
+        return 'reset';
+      default:
+        return '';
+    }
+  }
+  function matches(evt) {
+    if (activeTrace && evt.traceId !== activeTrace) return false;
+    var q = elSearch.value.trim().toLowerCase();
+    if (!q) return true;
+    return (evt.type + ' ' + (evt.name || '') + ' ' + JSON.stringify(evt.data || {})).toLowerCase().indexOf(q) !== -1;
+  }
+
+  function addRow(evt) {
+    var fam = family(evt.type);
+    var div = document.createElement('div');
+    div.className = 'ev f-' + fam;
+    div.dataset.trace = evt.traceId;
+    div.innerHTML =
+      '<span class="t">' + fmtTime(evt.ts) + '</span>' +
+      '<span class="badge">' + badgeOf(fam) + '</span>' +
+      '<div class="body">' +
+        '<div class="name">' + esc(evt.name || evt.type) + '</div>' +
+        '<div class="sum">' + esc(summarize(evt)) + '</div>' +
+        '<pre>' + esc(JSON.stringify(evt, null, 2)) + '</pre>' +
+      '</div>';
+    div.addEventListener('click', function () { div.classList.toggle('open'); });
+    elTimeline.insertBefore(div, elTimeline.firstChild);
+    while (elTimeline.children.length > MAX) elTimeline.removeChild(elTimeline.lastChild);
+  }
+
+  function aggregate() {
+    var map = {};
+    var order = [];
+    for (var i = 0; i < events.length; i++) {
+      var e = events[i];
+      var t = map[e.traceId];
+      if (!t) {
+        t = map[e.traceId] = {
+          id: e.traceId, name: '', status: 'running',
+          start: e.ts, end: null, tools: 0, gen: 0,
+          tokens: { input: 0, output: 0 },
+          files: {}, chars: 0, tests: null, demo: !!(e.meta && e.meta.demo),
+          last: e
+        };
+        order.push(t);
+      }
+      t.last = e;
+      if (!t.name && e.name) t.name = e.name;
+      if (!t.name && e.type === 'trace.start' && e.data && e.data.task) t.name = e.data.task;
+      if (e.type === 'tool.start') t.tools++;
+      if (e.type === 'generation.end' && e.data && e.data.usage) {
+        t.gen++;
+        t.tokens.input += e.data.usage.input || 0;
+        t.tokens.output += e.data.usage.output || 0;
+      }
+      if (e.type === 'context.read' && e.data) {
+        var f = e.data.file || '?';
+        t.files[f] = (t.files[f] || 0) + (e.data.chars || 0);
+        t.chars += e.data.chars || 0;
+      }
+      if (e.type === 'test.result' && e.data) t.tests = e.data;
+      if (e.type === 'trace.end') {
+        t.status = (e.data && e.data.status) || 'success';
+        t.end = e.ts;
+      }
+      if (e.type === 'task.complete') {
+        t.status = 'success';
+        t.end = t.end || e.ts;
+      }
+      if (e.type === 'error') t.status = 'error';
+    }
+    return order.map(function (t) {
+      t.duration = Math.max(0, (t.end || Date.now()) - t.start);
+      return t;
+    }).sort(function (a, b) { return b.start - a.start; });
+  }
+
+  function renderTraces() {
+    var traces = aggregate();
+    elTraceCount.textContent = traces.length + ' 个任务';
+    if (!traces.length) {
+      elTraces.innerHTML = '<div class="empty" style="padding:26px 14px">暂无任务</div>';
+      return;
+    }
+    var html = '';
+    traces.forEach(function (t) {
+      var files = Object.keys(t.files);
+      var fileChips = files.slice(0, 4).map(function (f) {
+        return '<span class="file-chip">' + esc(f.split(/[\\/]/).pop()) + ' · ' + fmtStats(t.files[f]) + '</span>';
+      }).join('');
+      var tests = t.tests
+        ? '<div class="testbar"><div class="bar"><i style="width:' + Math.round(100 * (t.tests.passed || 0) / Math.max(1, t.tests.total || 1)) + '%"></i></div><span class="lbl">' + (t.tests.passed || 0) + '/' + (t.tests.total || 0) + '</span></div>'
+        : '';
+      var now = t.last ? summarize(t.last) : '';
+      html +=
+        '<div class="task ' + t.status + (t.id === activeTrace ? ' active' : '') + '" data-id="' + esc(t.id) + '">' +
+          '<div class="task-top">' +
+            '<span class="name">' + esc(t.name || t.id) + '</span>' +
+            (t.demo ? '<span class="pill demo">DEMO</span>' : '') +
+            '<span class="pill ' + t.status + '">' + (t.status === 'running' ? 'RUNNING' : t.status === 'error' ? 'ERROR' : 'DONE') + '</span>' +
+          '</div>' +
+          '<div class="task-meta">' +
+            '<span>⏱ ' + fmtDur(t.duration) + '</span>' +
+            '<span>🛠 ' + t.tools + '</span>' +
+            '<span>✨ ' + t.gen + '</span>' +
+            (t.tokens.input ? '<span>🪙 ' + t.tokens.input + '→' + t.tokens.output + '</span>' : '') +
+            '<span>📄 ' + files.length + ' files · ' + fmtStats(t.chars) + '</span>' +
+          '</div>' +
+          (fileChips ? '<div class="task-files">' + fileChips + '</div>' : '') +
+          tests +
+          (now ? '<div class="task-now">▸ <b>' + esc(now) + '</b></div>' : '') +
+        '</div>';
+    });
+    elTraces.innerHTML = html;
+    Array.prototype.forEach.call(elTraces.querySelectorAll('.task'), function (node) {
+      node.addEventListener('click', function () {
+        activeTrace = activeTrace === node.dataset.id ? null : node.dataset.id;
+        elChain.textContent = activeTrace ? '仅看:' + String(activeTrace).slice(0, 18) : '全部任务';
+        elChain.classList.toggle('on', !activeTrace);
+        rebuildTimeline();
+        renderTraces();
+      });
+    });
+  }
+
+  function fmtStats(n) {
+    if (!n) return '0';
+    if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + 'k';
+    return String(n);
+  }
+
+  function renderStats() {
+    var traces = aggregate();
+    var tools = 0, tokens = 0, tests = null, done = 0;
+    traces.forEach(function (t) {
+      tools += t.tools;
+      tokens += t.tokens.input + t.tokens.output;
+      if (t.tests) tests = t.tests;
+      if (t.status === 'success') done++;
+    });
+    var html =
+      '<div class="stat"><b>' + traces.length + '</b><span>TRACES</span></div>' +
+      '<div class="stat"><b>' + events.length + '</b><span>EVENTS</span></div>' +
+      '<div class="stat"><b>' + tools + '</b><span>TOOLS</span></div>' +
+      '<div class="stat"><b>' + fmtStats(tokens) + '</b><span>TOKENS</span></div>' +
+      (tests ? '<div class="stat good"><b>' + (tests.passed || 0) + '/' + (tests.total || 0) + '</b><span>TESTS</span></div>' : '') +
+      '<div class="stat good"><b>' + done + '</b><span>DONE</span></div>';
+    elStats.innerHTML = html;
+    elEvCount.textContent = events.length + ' 条';
+  }
+
+  function rebuildTimeline() {
+    elTimeline.innerHTML = '';
+    var list = events.filter(matches);
+    if (!list.length) {
+      elTimeline.innerHTML = '<div class="empty">' + (events.length ? '没有匹配的事件' : '等待事件…<br/>启动演示:<code>npm run demo</code> · 或打开游戏 <code>?observe=1</code>') + '</div>';
+      return;
+    }
+    for (var i = list.length - 1; i >= 0; i--) addRow(list[i]);
+  }
+
+  function ingest(list) {
+    var fresh = [];
+    list.forEach(function (e) {
+      if (!e || !e.id || seen[e.id]) return;
+      seen[e.id] = true;
+      events.push(e);
+      fresh.push(e);
+    });
+    if (!fresh.length) return;
+    if (events.length > 4000) events.splice(0, events.length - 4000);
+    renderStats();
+    if (paused) return;
+    fresh.forEach(function (e) {
+      if (matches(e)) {
+        var first = elTimeline.querySelector('.ev, .empty');
+        if (first && first.classList.contains('empty')) elTimeline.innerHTML = '';
+        addRow(e);
+      }
+    });
+    renderTraces();
+  }
+
+  // 初始加载
+  fetch('/api/events?limit=600').then(function (r) { return r.json(); }).then(function (list) {
+    ingest(list);
+    if (events.length) rebuildTimeline();
+  }).catch(function () {});
+
+  // SSE 实时流
+  function connect() {
+    var es = new EventSource('/api/stream');
+    es.addEventListener('open', function () {
+      connected = true;
+      elConn.className = 'conn on';
+      elConnText.textContent = 'live · ' + location.host;
+    });
+    es.addEventListener('append', function (msg) {
+      try { ingest([JSON.parse(msg.data)]); } catch (err) {}
+    });
+    es.addEventListener('error', function () {
+      connected = false;
+      elConn.className = 'conn off';
+      elConnText.textContent = 'reconnecting…';
+      es.close();
+      setTimeout(connect, 2000);
+    });
+  }
+  connect();
+
+  elPause.addEventListener('click', function () {
+    paused = !paused;
+    elPause.classList.toggle('on', paused);
+    elPause.textContent = paused ? '▶ 继续跟随' : '⏸ 暂停跟随';
+    if (!paused) rebuildTimeline();
+  });
+
+  elClear.addEventListener('click', function () {
+    fetch('/api/clear', { method: 'POST' }).catch(function () {});
+    events = [];
+    seen = Object.create(null);
+    activeTrace = null;
+    elChain.textContent = '全部任务';
+    elChain.classList.add('on');
+    rebuildTimeline();
+    renderTraces();
+    renderStats();
+  });
+
+  elSearch.addEventListener('input', function () {
+    rebuildTimeline();
+  });
+
+  elChain.addEventListener('click', function () {
+    activeTrace = null;
+    elChain.textContent = '全部任务';
+    elChain.classList.add('on');
+    rebuildTimeline();
+    renderTraces();
+  });
+
+  setInterval(renderStats, 1000);
+})();
+</script>
+</body>
+</html>

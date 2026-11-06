@@ -1,0 +1,11 @@
+{
+  "name": "stardust-observer",
+  "private": true,
+  "type": "module",
+  "description": "本地优先的模型任务观测进程:真实事件流 + Langfuse 兼容导出",
+  "scripts": {
+    "start": "node server.mjs",
+    "demo": "node demo.mjs",
+    "test": "node test.mjs"
+  }
+}

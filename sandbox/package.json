@@ -1,0 +1,17 @@
+{
+  "name": "stardust-puzzle",
+  "private": true,
+  "type": "module",
+  "description": "星尘琥珀 · 闭馆谜题 —— 单文件互动叙事解谜的回归测试与截图工具",
+  "scripts": {
+    "test": "node tests/e2e.mjs",
+    "capture": "node tests/capture.mjs",
+    "agent": "node server/agent-server.mjs",
+    "agent:selftest": "node server/agent-server.mjs --selftest",
+    "test:agent": "node tests/agent.test.mjs",
+    "test:agent-e2e": "node tests/e2e-agent.mjs"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^24.0.0"
+  }
+}
